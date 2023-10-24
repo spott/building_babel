@@ -1,0 +1,6 @@
+**/.DS_Store
+**/.ipynb_checkpoints
+.direnv/
+.vscode/
+**/__pycache__
+.envrc

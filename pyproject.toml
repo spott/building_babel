@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "Building Babel"
+version = "0.1.0"
+description = ""
+authors = ["Andrew Spott <andrew.spott@gmail.com>"]
+readme = "README.md"
+packages = [{include = "building_babel", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.1.0"
+jupyterlab = "^4.0.7"
+attrs = "==22.2.0"
+numpy = "<1.26.0"
+torchtnt = "^0.2.1"
+lightning = "^2.1.0"
+
+
+[tool.poetry.group.dev.dependencies]
+torchfix = "^0.1.1"
+black = "^23.10.0"
+flake8 = "^6.1.0"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

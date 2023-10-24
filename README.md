@@ -32,6 +32,8 @@ We will be progressively growing this model from approximately 55M parameters, a
 
 ### Implementation questions:
 
+* The optimizer keeps a record of every parameter in the model in order to continue training it... do we need to preserve the optimizers record?
+* if we want to have different learning rates for different parts of the model, I think we *have* to have the optimizer keep track of different 
 * do we zero-init the embedding space as we expand it? or randomly initialize it?
 * How do we deal with the learning rate on previously learned parts of the model?
 * How do we deal with the residual connection after each attention head (especially if we have separate learning rates for the previous part of the model)?
