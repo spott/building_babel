@@ -2,9 +2,88 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import torch
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 from ..types import InitFunc_
+
+class GrowableRMSNorm(nn.Module):
+    """
+    A growable, function preserving version of RMSNorm.  This follows https://arxiv.org/pdf/2305.02869.pdf
+    and has a set of parameters that are 1 for the old dim, and 0 for the new dim, that are
+    multipled by x in _norm, ensuring that the new parameters don't immediately overwhelm the
+    norm.  The new params start at 0 and gradually increase over the next few training steps (num_iters) until
+    they reach 1 (at which point they are ignored)
+    """
+    def __init__(self, dim: int, eps: float = 1e-5, num_iters: int = 10):
+        super().__init__()
+        self.dims = [dim]
+        self.eps = eps
+        self.weight_splits = nn.ParameterDict({"0": nn.Parameter(torch.ones(dim))})
+        self.masks = {"0": torch.ones(dim, requires_grad=False)}
+        self.mask_frac = 1
+        self.num_iters = num_iters
+        self.iter = num_iters
+    
+    def mask_update(self):
+        gen = str(len(self.dims) - 1)
+        self.masks[gen] += (1 / self.num_iters)
+        self.iter += 1
+        self.mask_frac = self.dims[-2] + (self.dims[-1] - self.dims[-2]) * self.iter / self.num_iters
+
+    def _norm(self, x):
+        # x/sqrt(avg(x^2) + eps)
+        if self.iter >= self.num_iters:
+            return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        else:
+            y = torch.zeros_like(x)
+            for i, (prev_dim, dim) in enumerate(zip([0] + self.dims, self.dims)):
+                y[...,prev_dim:dim] += x[...,prev_dim:dim] * self.masks[str(i)]
+            m = y.pow(2).mean(-1, keepdim=True)
+            m /= self.mask_frac
+            y = x * torch.rsqrt(m + self.eps)
+            self.mask_update()
+            return y
+
+    def grow(self, final_dim: int):
+        """
+        given the final dimension, modify the norm to work for that dimension
+        """
+        #old_params = self.weight.data
+        delta_dim = final_dim - self.dims[-1]
+        new_params = torch.ones(delta_dim)
+        gen = str(len(self.dims))
+        self.weight_splits[gen] = nn.Parameter(new_params)
+        self.iter = 0
+        self.masks[gen] = torch.zeros(delta_dim)
+        self.mask_frac = self.dims[-1] / final_dim
+        self.dims.append(final_dim)
+
+    def forward(self, x):
+        # we transform to a 32 bit float before being normed to avoid numerical
+        # instability
+        x = self._norm(x.float()).type_as(x)
+        # x_i * w_i / sqrt(avg(x^2) + eps)
+        y = torch.zeros_like(x)
+        for i, (prev_dim, dim) in enumerate(zip([0] + self.dims, self.dims)):
+            y[...,prev_dim:dim] += x[...,prev_dim:dim] * self.weight_splits[str(i)]
+        return y
+
+class GrowableEmbedding(nn.Embedding):
+    def __init__(self, num_embeddings: int, embedding_dim: int, padding_idx: Optional[int] = None,
+                 max_norm: Optional[float] = None, norm_type: float = 2., scale_grad_by_freq: bool = False,
+                 sparse: bool = False, _weight: Optional[torch.Tensor] = None, _freeze: bool = False,
+                 device=None, dtype=None) -> None:
+        super().__init__(num_embeddings, embedding_dim, padding_idx, max_norm, norm_type, scale_grad_by_freq,sparse, _weight, _freeze, device, dtype)
+
+    @torch.no_grad()
+    def grow(self, new_dim):
+        old_emb_weights = self.weight
+        new_weights = old_emb_weights.new_empty((self.num_embeddings, new_dim))
+        self.weight = nn.Parameter(new_weights)
+        self.reset_parameters()
+        self.weight[:, :self.embedding_dim] = old_emb_weights
+        self.embedding_dim = new_dim
+        return
 
 class GrowableLinear(nn.Module):
     """
@@ -22,13 +101,14 @@ class GrowableLinear(nn.Module):
     """
 
     def __init__(
-        self, in_dim: int, out_dim: int, bias: bool = False, device=None, dtype=None
+        self, in_dim: int, out_dim: int, bias: bool = False, device=None, dtype=None, run_full=False,
     ) -> None:
         assert not bias, "Doesn't support bias at the moment"
         self.factory_kwargs = {"device": device, "dtype": dtype}
         super().__init__()
         self.in_dims = [in_dim]
         self.out_dims = [out_dim]
+        self.run_full = run_full
         # self.multiple = multiple
         # self.full_matrix = torch.empty((dim, dim), requires_grad=True, **factory_kwargs)
         self.weight_splits: nn.ParameterDict = nn.ParameterDict(
@@ -134,7 +214,6 @@ class GrowableLinear(nn.Module):
         for i, (prev_in_dim, in_dim, prev_out_dim, out_dim) in enumerate(
             zip([0] + self.in_dims, self.in_dims, [0] + self.out_dims, self.out_dims)
         ):
-            #print(prev_in_dim, in_dim, prev_out_dim, out_dim)
             if i == 0:
                 self._full_matrix[
                     prev_out_dim:out_dim, prev_in_dim:in_dim
@@ -183,25 +262,22 @@ class GrowableLinear(nn.Module):
         if hasattr(self, "_full_matrix"):
             delattr(self,"_full_matrix")
 
-
     def forward(self, x):
-        # we need to build the resultant vector up by building the resultant parts.
-        # we can build it out from the center:
-        # y_0 = 0 * x
-        # y_1
-        bs, _ = x.size()
-        y = torch.zeros((bs, self.out_dims[-1]))
+        if self.run_full:
+            return F.linear(x, self.full_matrix())
+        shape = list(x.size())
+        shape[-1] = self.out_dims[-1]
+        y = torch.zeros(shape).to(x)
+
         for i, (prev_in_dim, in_dim, prev_out_dim, out_dim) in enumerate(
             zip([0] + self.in_dims, self.in_dims, [0] + self.out_dims, self.out_dims)
         ):
             if i == 0:
-                y[:, :out_dim] = torch.matmul(
-                    x[:, :in_dim], self.weight_splits[str(i)].T
-                )
+                y[..., :out_dim] = F.linear(x[...,:in_dim], self.weight_splits[str(i)])
             else:
-                y[:, prev_out_dim:out_dim] = torch.addmm(y[:, prev_out_dim:out_dim], x[:,:prev_in_dim], self.weight_splits[str(i)]['ll'].T)
-                y[:, :prev_out_dim] = torch.addmm(y[:, :prev_out_dim], x[:,prev_in_dim:in_dim], self.weight_splits[str(i)]['ur'].T)
-                y[:, prev_out_dim:out_dim] = torch.addmm(y[:, prev_out_dim:out_dim], x[:,prev_in_dim:in_dim], self.weight_splits[str(i)]['lr'].T)
+                y[..., prev_out_dim:out_dim] += F.linear(x[...,:prev_in_dim], self.weight_splits[str(i)]['ll'])
+                y[..., :prev_out_dim] += F.linear(x[...,prev_in_dim:in_dim], self.weight_splits[str(i)]['ur'])
+                y[..., prev_out_dim:out_dim] += F.linear(x[...,prev_in_dim:in_dim], self.weight_splits[str(i)]['lr'])
         return y
     
 

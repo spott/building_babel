@@ -7,47 +7,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .modules.rope import RoPE
+
 from .types import InitFunc_, TransformerConfig
-from .modules.growable import GrowableLinear
+from .modules.growable import GrowableEmbedding, GrowableLinear, GrowableRMSNorm
 from typing import Optional, Callable
 
-
-
-class RMSNorm(nn.Module):
-    def __init__(self, dim: int, eps: float = 1e-5):
-        super().__init__()
-        self.dim = dim
-        self.eps = eps
-        self.weight = nn.Parameter(torch.ones(dim))
-
-    def _norm(self, x):
-        # x/sqrt(avg(x^2) + eps)
-        return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
-
-    def grow(self, final_dim: int):
-        """
-        given the final dimension, modify the norm to work for that dimension
-        """
-        old_params = self.weight.data
-        delta_dim = final_dim - self.dim
-        new_params = torch.ones(delta_dim)
-        self.weight = nn.Parameter(torch.cat([old_params, new_params]))
-        self.dim = final_dim
-
-    def forward(self, x):
-        # we transform to a 32 bit float before being normed to avoid numerical
-        # instability
-        output = self._norm(x.float()).type_as(x)
-        # x_i * w_i / sqrt(avg(x^2) + eps)
-        return output * self.weight
-
-
 class Attention(nn.Module):
-    def __init__(self, config: TransformerConfig):
+    def __init__(self, config: TransformerConfig, rope: RoPE):
         super().__init__()
         self.head_dim = config.head_dim
         self.dim = config.dim
         self.n_heads = self.dim // self.head_dim
+        self.rope = rope
         assert self.n_heads * self.head_dim == self.dim
 
         # We phrase this in terms of the size of the heads and the size of the
@@ -71,22 +43,22 @@ class Attention(nn.Module):
 
         self.n_heads = self.dim // self.head_dim
         assert self.n_heads * self.head_dim == self.dim
-
-    def forward(self, x, freqs_cis: torch.Tensor):
+    
+    def forward(self, x):
         bs, sl, _ = x.size()
 
         q = self.wq_in(x)
         k = self.wk_in(x)
         v = self.wv_in(x)
 
-        # q, k = apply_rotary_emb(xq, xk, freqs_cis)
+        q, k = self.rope.apply_rotary_emb(q, k)
 
         q = q.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
         k = k.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
         v = v.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
 
         y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, is_causal=True)
-        y.transpose(1, 2).contiguous().view(bs, sl, self.dim)
+        y = y.transpose(1, 2).contiguous().view(bs, sl, self.dim)
         return self.w_out(y)
 
 class FeedForwardNetwork(nn.Module):
@@ -115,11 +87,11 @@ class FeedForwardNetwork(nn.Module):
         self.hidden_dim = hidden_dim
 
     def forward(self, x):
-        self.w2(F.silu(self.w1(x)) + self.gate(x))
+        return self.w2(F.silu(self.w1(x)) * self.gate(x))
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, layer_id: int, config: TransformerConfig):
+    def __init__(self, layer_id: int, config: TransformerConfig, rope: RoPE):
         super().__init__()
         self.dim = config.dim
         self.norm_eps = config.norm_eps
@@ -127,20 +99,20 @@ class TransformerBlock(nn.Module):
         self.head_dim = config.head_dim
         self.multiple_of = config.multiple_of
         self.config = config
-        self.attention = Attention(config)
-        self.attention_norm = RMSNorm(self.dim, eps=self.norm_eps)
+        self.attention = Attention(config, rope=rope)
+        self.attention_norm = GrowableRMSNorm(self.dim, eps=self.norm_eps)
         self.feed_forward = FeedForwardNetwork(config)
-        self.feed_forward_norm = RMSNorm(self.dim, eps=self.norm_eps)
+        self.feed_forward_norm = GrowableRMSNorm(self.dim, eps=self.norm_eps)
     
     def grow(self, new_dim, init_attention: InitFunc_|None = None, init_w: InitFunc_|None = None, init_gate: InitFunc_|None = None):
         self.dim = new_dim
-        self.attention.grow(new_dim)
+        self.attention.grow(new_dim, init_attention)
         self.attention_norm.grow(new_dim)
-        self.feed_forward.grow(new_dim)
+        self.feed_forward.grow(new_dim, init_w, init_gate)
         self.feed_forward_norm.grow(new_dim)
 
-    def forward(self, x: torch.Tensor, start_pos: int, freqs_cis: torch.Tensor):
-        h = x + self.attention(self.attention_norm(x), start_pos, freqs_cis)
+    def forward(self, x: torch.Tensor):
+        h = x + self.attention(self.attention_norm(x))
         out = h + self.feed_forward(self.feed_forward_norm(h))
         return out
 
@@ -152,11 +124,18 @@ class Transformer(nn.Module):
         self.vocab_size = config.vocab_size
         self.n_layers = config.n_layers
         self.dim = config.dim
+        self.rope = RoPE(self.dim, self.config.theta, self.config.max_seq_len)
         
-        self.text_embeddings = nn.Embedding(self.vocab_size, self.dim)
-        self.layers = nn.Sequential(*[TransformerBlock(i, config) for i in range(self.n_layers)])
-        self.norm = RMSNorm(self.dim, eps=config.norm_eps)
+        self.text_embeddings = GrowableEmbedding(self.vocab_size, self.dim)
+        self.layers = nn.Sequential(*[TransformerBlock(i, config, self.rope) for i in range(self.n_layers)])
+        self.norm = GrowableRMSNorm(self.dim, eps=config.norm_eps)
         self.output = GrowableLinear(self.dim, self.vocab_size)
+
+    def get_num_params(self, incl_embedding=True):
+        n_params = sum(p.numel() for p in self.parameters())
+        if not incl_embedding:
+            n_params -= self.text_embeddings.weight.numel()
+        return n_params
 
     def grow(self, new_dim: int | None=None, new_layers: int|None=None):
         assert new_dim or new_layers, "Must set one of new_dim or new_layers"
@@ -167,10 +146,12 @@ class Transformer(nn.Module):
                 layer.grow(new_dim)
             self.norm.grow(new_dim)
             self.output.grow(new_dim, self.vocab_size)
+            self.rope.grow(new_dim)
+            self.text_embeddings.grow(new_dim)
             self.dim = new_dim
         
         if new_layers is not None:
-            [self.layers.append(TransformerBlock(i, self.config)) for i in range(self.n_layers, new_layers)]
+            [self.layers.append(TransformerBlock(i, self.config, self.rope)) for i in range(self.n_layers, new_layers)]
             self.n_layers = new_layers
         
 

@@ -45,12 +45,11 @@ doesn't do well for smaller models, and we will be small most of the time.
 ### Todo:
 * GrowableLinear needs to be parallized.
 * GrowableLinear might need a way to condense generations in to get some speedups (so maybe after 2 gens, we fuse the learning rates of the all smaller gens).
-* GrowableLinear might need to figure out how to not create an empty parameter set when one dim doesn't grow (like vocab_size)
-* GrowableEmbedding needs to be created...
 * Flops counter needs to be created.
-* parameter counter needs to be created.
-* RoPE needs to be done.  Using [this](https://github.com/foundation-model-stack/foundation-model-stack/blob/main/fms/modules/positions.py) could be a good place to start.
+* RoPE needs to be compilable.  Using [this](https://github.com/foundation-model-stack/foundation-model-stack/blob/main/fms/modules/positions.py) could be a good place to start.
 * we might need to have a way to grow the individual head_dim... otherwise we might not be able to have the same head_dim for small and large models.
+    * growable head dim is going to be tricky... 
+* ensure growable layers
 
 ## Further work:
 

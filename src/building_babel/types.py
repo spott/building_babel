@@ -12,4 +12,6 @@ class TransformerConfig:
     norm_eps: float = 1e-5
     head_dim: int = 128
     multiple_of: int = 128
+    max_seq_len: int = 4096
+    theta: int = 10000
 

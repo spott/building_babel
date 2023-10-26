@@ -1,4 +1,6 @@
+from numpy import allclose
 import building_babel.modules.growable as bbg
+import building_babel.model as bbm
 import torch
 import torch.nn.functional as F
 
@@ -64,6 +66,63 @@ def test_insert():
     y = grl(x)
     assert torch.all(y == yp)
 
+def _no_change(in_dims = [2,4,6], out_dims=[3,5,7], bs=2, sl=4, allclose_params = {"rtol": 1e-5, "atol":1e-8, "equal_nan": True}):
+    grl = bbg.GrowableLinear(in_dims[0],out_dims[0])
+    x = torch.randn((bs,sl,out_dims[-1]))
+    y1p = torch.nn.functional.linear(x[...,:in_dims[0]], grl.full_matrix())
+    y1 = grl(x)
+    assert torch.allclose(y1,y1p, **allclose_params)
+    grl.grow(in_dims[1],out_dims[1])
+    y2p = torch.nn.functional.linear(x[...,:in_dims[1]], grl.full_matrix())
+    y2 = grl(x)
+    assert torch.allclose(y2,y2p, **allclose_params), f"{y2-y2p}"
+    assert torch.allclose(y1p[...,:out_dims[0]], y2p[...,:out_dims[0]], **allclose_params), f"{y1p-y2p[...,:out_dims[0]]}"
+    assert torch.allclose(y1[...,:out_dims[0]], y2[...,:out_dims[0]], **allclose_params), f"{y1-y2[...,:out_dims[0]]}"
+    grl.grow(in_dims[2],out_dims[2])
+    y3p = torch.nn.functional.linear(x[...,:in_dims[2]], grl.full_matrix())
+    y3 = grl(x)
+    assert torch.allclose(y3,y3p, **allclose_params), f"{y3p-y3}"
+    assert torch.allclose(y1p[...,:out_dims[0]], y3p[...,:out_dims[0]], **allclose_params), f"{y1p-y3p[...,:out_dims[0]]}"
+    assert torch.allclose(y1[...,:out_dims[0]], y3[...,:out_dims[0]], **allclose_params), f"{y1-y3[...,:out_dims[0]]}"
+    assert torch.allclose(y2p[...,:out_dims[1]], y3p[...,:out_dims[1]], **allclose_params), f"{y2p[...,:out_dims[1]]-y3p[...,:out_dims[1]]}"
+    assert torch.allclose(y2[...,:out_dims[1]], y3[...,:out_dims[1]], **allclose_params), f"{y2[...,:out_dims[1]]-y3[...,:out_dims[1]]}"
+
+def test_matmul_no_change():
+    allclose_params = {"rtol": 1e-5, "atol":1e-8, "equal_nan": True}
+    _no_change(allclose_params=allclose_params)
+    _no_change([10,20,40],[30,60,120], allclose_params=allclose_params)
+    _no_change([128,256,512], [128,256,512], 3, 7, allclose_params=allclose_params)
+
+def test_matmul():
+    grl = bbg.GrowableLinear(2,3)
+    grl.grow(4,5, init=torch.nn.init.kaiming_normal_)
+    grl.grow(6,7, init=torch.nn.init.kaiming_normal_)
+
+    x = torch.randn((2,4,6))
+    yp = torch.nn.functional.linear(x, grl.full_matrix())
+    y = grl(x)
+    assert torch.allclose(y,yp)
+
+def test_RMSNorm_no_change():
+    r = bbg.GrowableRMSNorm(100, 1e-5)
+    x = torch.randn((2,3,150))
+    y = r(x[...,:100])
+    r.grow(150)
+    y1 = r(x)
+    assert torch.allclose(y[...,:100], y1[...,:100])
+
+def test_model_grow():
+    """
+    we would like this to have a smaller atol, but I'll be ok with it
+    given the rtol is decently low.
+    """
+    c = bbm.TransformerConfig(128, 1, 1000)
+    t = bbm.Transformer(c)
+    x = torch.tensor([[1,2,400,23,1,23,4]])
+    y1 = t(x)
+    t.grow(256)
+    y2 = t(x)
+    assert torch.allclose(y1,y2, atol=1e-1, rtol=1e-5), f"{y1-y2=}"
 
 # def test_insert_InPlace():
 #     grl = bbg.GrowableLinearInPlace(2,3)
