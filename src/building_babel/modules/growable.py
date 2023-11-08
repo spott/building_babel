@@ -4,6 +4,11 @@ import math
 import torch
 
 from ..types import InitFunc_
+from logging import getLogger
+
+
+logger = getLogger("__name__")
+
 
 class GrowableRMSNorm(nn.Module):
     """
@@ -301,15 +306,18 @@ class GrowableLinear(nn.Module):
             delattr(self, "_full_matrix")
 
     def forward(self, x):
+        logger.debug("in growable_linear")
         if self.run_full:
             return F.linear(x, self.full_matrix())
         shape = list(x.size())
         shape[-1] = self.out_dims[-1]
         y = torch.zeros(shape).to(x)
 
+        logger.debug("building output")
         for i, (prev_in_dim, in_dim, prev_out_dim, out_dim) in enumerate(
             zip([0] + self.in_dims, self.in_dims, [0] + self.out_dims, self.out_dims, strict=False)
         ):
+            logger.debug(f"{i} output: {y.shape}, {x.shape=}, {self.weight_splits[str(i)].shape=}, {in_dim=}, {prev_in_dim=}, {out_dim=}, {prev_out_dim=}")
             if i == 0:
                 y[..., :out_dim] = F.linear(x[..., :in_dim], self.weight_splits[str(i)])
             else:

@@ -1,14 +1,18 @@
 """
 In the future, we should look at this:
 https://github.com/foundation-model-stack/foundation-model-stack/blob/main/fms/modules/positions.py
-(Their implementation doesn't use complex numbers, and can thus be torch.compiled.)
+(Their implementation doesn't use complex numbers, and can thus be
+torch.compiled.)
 
 but initially, we will just do the llama way:
 
 """
 
 import torch
-from typing import Tuple
+from logging import getLogger
+
+
+logger = getLogger("__name__")
 
 
 class RoPE:
