@@ -1,8 +1,9 @@
-from typing import Callable, List
+from collections.abc import Callable
 from torch import Tensor
 from dataclasses import dataclass
 
-InitFunc_ = Callable[[Tensor], Tensor|None]
+InitFunc_ = Callable[[Tensor], Tensor | None]
+
 
 @dataclass
 class TransformerConfig:
@@ -14,4 +15,3 @@ class TransformerConfig:
     multiple_of: int = 128
     max_seq_len: int = 4096
     theta: int = 10000
-

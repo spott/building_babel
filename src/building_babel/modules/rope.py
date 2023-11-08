@@ -11,7 +11,7 @@ import torch
 from typing import Tuple
 
 
-class RoPE():
+class RoPE:
     def __init__(self, dim: int, theta: int = 10_000, max_seq_len: int = 4096):
         super().__init__()
         self.dim = dim
@@ -25,28 +25,34 @@ class RoPE():
 
     def precompute_freqs_cis(self, end):
         """
-        Precompute the frequency tensor for complex exponentials (cis) with given dimensions.
+        Precompute the frequency tensor for complex exponentials (cis) with
+        given dimensions.
 
-        This function calculates a frequency tensor with complex exponentials using the given dimension 'dim'
-        and the end index 'end'. The 'theta' parameter scales the frequencies.
-        The returned tensor contains complex values in complex64 data type.
+        This function calculates a frequency tensor with complex exponentials
+        using the given dimension 'dim' and the end index 'end'. The 'theta'
+        parameter scales the frequencies. The returned tensor contains complex
+        values in complex64 data type.
 
         Args:
             dim (int): Dimension of the frequency tensor.
             end (int): End index for precomputing frequencies.
-            theta (float, optional): Scaling factor for frequency computation. Defaults to 10000.0.
+            theta (float, optional): Scaling factor for frequency computation.
+            Defaults to 10000.0.
 
         Returns:
-            torch.Tensor: Precomputed frequency tensor with complex exponentials.
+            torch.Tensor: Precomputed frequency tensor with complex
+            exponentials.
         """
         if self.max_seq_len < end:
             self.max_seq_len = end
-        freqs = 1.0 / (self.theta ** (torch.arange(0, self.dim, 2)[: (self.dim // 2)].float() / self.dim))
+        freqs = 1.0 / (
+            self.theta
+            ** (torch.arange(0, self.dim, 2)[: (self.dim // 2)].float() / self.dim)
+        )
         t = torch.arange(end, device=freqs.device)  # type: ignore
         freqs = torch.outer(t, freqs).float()  # type: ignore
         self.freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64
 
-    
     def reshape_for_broadcast(self, x: torch.Tensor):
         """
         Reshape frequency tensor for broadcasting it with another tensor.
@@ -69,12 +75,13 @@ class RoPE():
         assert 0 <= 1 < ndim
         assert self.freqs_cis.shape[-1] == x.shape[-1]
         shape = [d if i == 1 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)]
-        return self.freqs_cis[:x.shape[1],:].view(*shape)
-    
-    def apply_rotary_emb(self,
+        return self.freqs_cis[: x.shape[1], :].view(*shape)
+
+    def apply_rotary_emb(
+        self,
         xq: torch.Tensor,
         xk: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Apply rotary embeddings to input tensors using the given frequency tensor.
 
@@ -91,7 +98,7 @@ class RoPE():
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: Tuple of modified query tensor and key tensor with rotary embeddings.
 
-            
+
 
         """
         xq_ = torch.view_as_complex(xq.float().reshape(*xq.shape[:-1], -1, 2))

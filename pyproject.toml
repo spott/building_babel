@@ -14,6 +14,11 @@ attrs = "==22.2.0"
 numpy = "<1.26.0"
 torchtnt = "^0.2.1"
 lightning = "^2.1.0"
+datasets = "^2.14.6"
+sentencepiece = "^0.1.99"
+zstandard = "^0.21.0"
+ipywidgets = "^8.1.1"
+bokeh = "^3.3.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -28,3 +33,88 @@ pytest = "^7.4.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[mypy-sentencepiece.*]
+ignore_missing_imports = True
+
+[tool.black]
+# Uncomment if pyproject.toml worked fine to ensure consistency with flake8
+line-length = 100
+target-version = ["py310", "py311"]
+
+
+[tool.ruff]
+target-version = "py310"
+ignore = [
+    # these ignores are from flake8-bugbear; please fix!
+  #"B007", "B008", "B017",
+  #"B018", # Useless expression
+  #"B019",
+  #"B023", "B026",
+  #"B028", # No explicit `stacklevel` keyword argument found
+  #"B904",
+  #"E402",
+    "C408", # C408 ignored because we like the dict keyword argument syntax
+    "E501", # E501 is not flexible enough, we're using B950 instead
+    "E721",
+    "E731", # Assign lambda expression
+    "E741",
+    "EXE001",
+    # "F405",
+    # "F821",
+    # "F841",
+    # these ignores are from flake8-logging-format; please fix!
+  # "G101", "G201", "G202",
+    # these ignores are from RUFF perf; please fix!
+  #"PERF203", "PERF4",
+  #"PYI001", # these ignores are from PYI; please fix!
+  #"PYI019",
+  #"PYI024",
+  #"PYI036",
+  "PYI041",
+  #"PYI056",
+  #"SIM102",
+  #"SIM103", 
+    #"SIM112", # flake8-simplify code styles
+  #"SIM105", # these ignores are from flake8-simplify. please fix or ignore with commented reason
+  #"SIM108",
+  #"SIM110",
+  #"SIM114", # Combine `if` branches using logical `or` operator
+  #"SIM115",
+  #"SIM116", # Disable Use a dictionary instead of consecutive `if` statements
+  #"SIM117",
+  #"SIM118",
+  #"UP006", # keep-runtime-typing
+  #"UP007", # keep-runtime-typing
+  "G004", # logging statement uses f-string.
+]
+line-length = 100
+select = [
+    "B",
+    "C4",
+    "G",
+    "E",
+    "F",
+    "SIM1",
+    "W",
+    # Not included in flake8
+    "UP",
+    "PERF",
+    "PGH004",
+    "PIE807",
+    "PIE810",
+    "PLE",
+    "PLR1722", # use sys exit
+    "PLW3301", # nested min max
+    "PT",
+    # "PT006", # TODO: enable more PT rules
+    # "PT022",
+    # "PT023",
+    # "PT024",
+    # "PT025",
+    # "PT026",
+    "PYI",
+    "RUF017",
+    "TRY200",
+    "TRY302",
+]
