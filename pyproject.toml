@@ -34,8 +34,9 @@ pytest = "^7.4.2"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[mypy-sentencepiece.*]
-ignore_missing_imports = True
+[[tool.mypy.overrides]]
+module = ["sentencepiece.*"]
+ignore_missing_imports = true
 
 [tool.black]
 # Uncomment if pyproject.toml worked fine to ensure consistency with flake8
