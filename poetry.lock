@@ -3558,6 +3558,37 @@ typing-extensions = "*"
 opt-einsum = ["opt-einsum (>=3.3)"]
 
 [[package]]
+name = "torchdata"
+version = "0.7.0"
+description = "Composable data loading modules for PyTorch"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "torchdata-0.7.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:6118262f35fa359e8b5ea050e812bb4e23337f683a02f54f7716b43450556bc0"},
+    {file = "torchdata-0.7.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:958b839b126bdfb41e22b69ff34f74af7c9fd8e9b0a24c6e527e001b1c9d3ac5"},
+    {file = "torchdata-0.7.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ab24443f7365227fa0f96e1e40fa8fac2edcded132ccffbe481203c359edca95"},
+    {file = "torchdata-0.7.0-cp310-cp310-win_amd64.whl", hash = "sha256:ce8d4e44fab23739b957b4ab33b24be1466bad14f4adce8f3e55a5f83f23b27a"},
+    {file = "torchdata-0.7.0-cp311-cp311-macosx_10_13_x86_64.whl", hash = "sha256:5a135c14850873d549382025265182934d46a2ef673e2c5cbb08ec656c808e63"},
+    {file = "torchdata-0.7.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:85c5122370de84bb43d15ed18ce589c855c49782b19fbb9b6d7ed4ee98fd1dac"},
+    {file = "torchdata-0.7.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b9a5cce29fb08743cccff868da56aa7495ed693fe621eea568c8c9726a2c0360"},
+    {file = "torchdata-0.7.0-cp311-cp311-win_amd64.whl", hash = "sha256:c3b31e9b7dff99729ac65de0a39395d0e3e4ad7b55936e190146a450bffb101a"},
+    {file = "torchdata-0.7.0-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:8ea089167ce62c2399fff81f561700bded21023a270f02f78d485f40a34ff8f7"},
+    {file = "torchdata-0.7.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:6139102ccb8d7376eb83361c57fb4cc25771b331e1e4ca2090b671ac38b48e5c"},
+    {file = "torchdata-0.7.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:236186def583a8704c5f1f4f6f0e95d474b37dcf992a9da7463b5911bb16b565"},
+    {file = "torchdata-0.7.0-cp38-cp38-win_amd64.whl", hash = "sha256:b5514d2e2d8bb0ba81ad808aa2f50886bc66ab96fd5da1eedd0aaabbe7fc5f7c"},
+    {file = "torchdata-0.7.0-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:b801ecff7ffb63f0fa61688da3a20431872bc15aa625fbc3a723b618e3132992"},
+    {file = "torchdata-0.7.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:00b2efdce02fab70a067598f4847692bae57d3781876bd7a01340b3836bf42b7"},
+    {file = "torchdata-0.7.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a616e20849ae0f1b8d5d09c03aa1ee79dbe1ff369b412e907e006dc39013b62f"},
+    {file = "torchdata-0.7.0-cp39-cp39-win_amd64.whl", hash = "sha256:0e8002223f9f80ec13ac9f0012bcbe64faa4060621525f4ed37e032c23ffeb07"},
+    {file = "torchdata-0.7.0-py3-none-any.whl", hash = "sha256:98ff5c4b73fc13fe663821d6ead044e47da637b90f86b430505419672f9c77dc"},
+]
+
+[package.dependencies]
+requests = "*"
+torch = "2.1.0"
+urllib3 = ">=1.25"
+
+[[package]]
 name = "torchfix"
 version = "0.1.1"
 description = ""
@@ -3600,6 +3631,38 @@ test = ["bert-score (==0.3.13)", "cloudpickle (>1.3)", "coverage (==7.3.1)", "dy
 text = ["nltk (>=3.6)", "regex (>=2021.9.24)", "tqdm (>=4.41.0)", "transformers (>4.4.0)"]
 typing = ["mypy (==1.5.1)", "types-PyYAML", "types-emoji", "types-protobuf", "types-requests", "types-setuptools", "types-six", "types-tabulate"]
 visual = ["SciencePlots (>=2.0.0)", "matplotlib (>=3.2.0)"]
+
+[[package]]
+name = "torchtext"
+version = "0.16.0"
+description = "Text utilities, models, transforms, and datasets for PyTorch."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "torchtext-0.16.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:d43b5045bdc27380fd3597801d6ae1d74bebd850fe435286eedec20827aefe45"},
+    {file = "torchtext-0.16.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:f033514bc7d8eaa9659e3f85ae874d4166b73d9de11c0c16e471e05bc42aef3d"},
+    {file = "torchtext-0.16.0-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:67087ebc95acd6c9f9679b5e33dc395a263c421e40ca44d3bba2e7cd48b99320"},
+    {file = "torchtext-0.16.0-cp310-cp310-win_amd64.whl", hash = "sha256:34d9f0663ebc526501a4ecf9d7f302a8a014537a74271c1170efb8a22169427b"},
+    {file = "torchtext-0.16.0-cp311-cp311-macosx_10_13_x86_64.whl", hash = "sha256:138e661f5d61d6a684ee7dec712d30503d2cacdc55c1415c72abc488c601a2c2"},
+    {file = "torchtext-0.16.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c8cf13132ec352ef6f5ca512faf0f309f1dcbd7632d8eb5979d039f244dcfc5c"},
+    {file = "torchtext-0.16.0-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:3dbe04e711bf8ecc514753f4a218a76ed59b3a1748df81c37ad39fa54a6e0d59"},
+    {file = "torchtext-0.16.0-cp311-cp311-win_amd64.whl", hash = "sha256:5786e504214e788b8c3839c14997eed2115406a832cf6ab3e4ad6c9653c6550f"},
+    {file = "torchtext-0.16.0-cp38-cp38-macosx_10_13_x86_64.whl", hash = "sha256:b21d2af2593d9bf796ec549f4b6b7b5d9b187236744cb20dcb07a9f8f8bc8744"},
+    {file = "torchtext-0.16.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:90f4674a3b05eafc13f0072b798900923392bcfba4d2cf4edd7c4c21b3210460"},
+    {file = "torchtext-0.16.0-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:9e81a554c3728893fdf2a0a14b605ea0ff1d835e79a6fd3668f87404fca890a2"},
+    {file = "torchtext-0.16.0-cp38-cp38-win_amd64.whl", hash = "sha256:d45b5c90e5932dfe6d7dcc176c2a9f125cc8143220f91d2d87f8947ebb26e04d"},
+    {file = "torchtext-0.16.0-cp39-cp39-macosx_10_13_x86_64.whl", hash = "sha256:f371373e504985d1385df2a4081592ea8acfcc49e9800cbe8892634aad4f3669"},
+    {file = "torchtext-0.16.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:2ef44c03277e2de82d3111a2004944c1af7fbc08c58c3d9538e81ca193885a96"},
+    {file = "torchtext-0.16.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:134979fca1a548ff1084a75b6d322fe7511007ff47d653e972f0a37ad2b0653a"},
+    {file = "torchtext-0.16.0-cp39-cp39-win_amd64.whl", hash = "sha256:4a9761318b85dcc83364f2cb3322ea2144e7be2379451beb8f7c063e50d075b2"},
+]
+
+[package.dependencies]
+numpy = "*"
+requests = "*"
+torch = "2.1.0"
+torchdata = "0.7.0"
+tqdm = "*"
 
 [[package]]
 name = "torchtnt"
@@ -4119,4 +4182,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e5d85eb881de721897f899e3a44402e105f4a1bb642daf512ce1201740a573e0"
+content-hash = "d763de36a659108c0801b9af360b5cb52202603d23a320852e08750ff92d073c"
