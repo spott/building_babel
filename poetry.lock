@@ -3558,6 +3558,27 @@ typing-extensions = "*"
 opt-einsum = ["opt-einsum (>=3.3)"]
 
 [[package]]
+name = "torch-tb-profiler"
+version = "0.4.3"
+description = "PyTorch Profiler TensorBoard Plugin"
+optional = false
+python-versions = ">=3.6.2"
+files = [
+    {file = "torch_tb_profiler-0.4.3-py3-none-any.whl", hash = "sha256:207a49b05572dd983e4ab29eb5e0fcadd60374a8f93c78ec638217e8d18788dc"},
+    {file = "torch_tb_profiler-0.4.3.tar.gz", hash = "sha256:8b8d29b2de960b3c4423087b23cec29beaf9ac3a8c7b046c18fd25b218f726b1"},
+]
+
+[package.dependencies]
+pandas = ">=1.0.0"
+tensorboard = ">=1.15,<2.1.0 || >2.1.0"
+
+[package.extras]
+blob = ["azure-storage-blob"]
+gs = ["google-cloud-storage"]
+hdfs = ["fsspec", "pyarrow"]
+s3 = ["boto3"]
+
+[[package]]
 name = "torchdata"
 version = "0.7.0"
 description = "Composable data loading modules for PyTorch"
@@ -4182,4 +4203,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d763de36a659108c0801b9af360b5cb52202603d23a320852e08750ff92d073c"
+content-hash = "5f9fe2baed36d846ba3b5726de23c468cbe2f8d03e8d042fe9e63b665ffcb8cf"
