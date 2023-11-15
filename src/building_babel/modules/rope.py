@@ -9,13 +9,14 @@ but initially, we will just do the llama way:
 """
 
 import torch
+from torch import nn
 from logging import getLogger
 
 
 logger = getLogger("__name__")
 
 
-class RoPE:
+class RoPE(nn.Module):
     def __init__(self, dim: int, theta: int = 10_000, max_seq_len: int = 4096):
         super().__init__()
         self.dim = dim
@@ -55,7 +56,8 @@ class RoPE:
         )
         t = torch.arange(end, device=freqs.device)  # type: ignore
         freqs = torch.outer(t, freqs).float()  # type: ignore
-        self.freqs_cis = torch.polar(torch.ones_like(freqs), freqs)  # complex64
+        self.register_buffer("freqs_cis", torch.polar(torch.ones_like(freqs), freqs), persistent=False)
+        #self.freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
 
     def reshape_for_broadcast(self, x: torch.Tensor):
         """
