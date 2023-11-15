@@ -4,26 +4,26 @@ from datasets import load_dataset
 import torch
 import building_babel.model as bbm
 import torch.nn.functional as F
-from logging import basicConfig, INFO
+from logging import basicConfig, INFO, DEBUG
 from torchtext.functional import to_tensor
-import lightning as L
+import lightning.pytorch as L
 from lightning.pytorch.callbacks import DeviceStatsMonitor
 from lightning.pytorch.loggers import CSVLogger
+from lightning.pytorch.profilers import PyTorchProfiler
 
-torch.set_float32_matmul_precision('medium')
+#torch.set_float32_matmul_precision('medium')
+#torch.multiprocessing.set_start_method("spawn")
 # %%
-basicConfig(level=INFO)
-ds = load_dataset("roneneldan/TinyStories", split="train")
-lt = LlamaTokenizer("/root/tokenizer.model")
 
 # %%
 class SimpleDataset(torch.utils.data.Dataset):
-    def __init__(self, df, max_len = 1024):
+    def __init__(self, df, tokenizer, max_len = 1024):
         self.df = df['text']
         self.max_len = max_len #df['text'].apply(len).max()
+        self.tokenizer = tokenizer
 
     def __getitem__(self, i):
-        tokenized = lt.encode(self.df[i], True, True)
+        tokenized = self.tokenizer.encode(self.df[i], True, True)
         #pad = (0,max(0,self.max_len - len(tokenized)))
         #return F.pad(tokenized, pad, "constant", 0) # we pad with 0s, but it really doesn't matter, because we have a stop token...
         return tokenized
@@ -53,9 +53,6 @@ def collate_fn(ts):
 
 
 # %%
-config = bbm.TransformerConfig(128, 1, lt.n_words, head_dim=128, max_seq_len=5499)
-sds = SimpleDataset(ds)
-dl = torch.utils.data.DataLoader(sds, batch_size=10, shuffle=True, collate_fn=collate_fn, num_workers=10)
 
 class Babel(L.LightningModule):
     def __init__(self, config):
@@ -73,9 +70,15 @@ class Babel(L.LightningModule):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=3e-5)
         return optimizer
 
-b = Babel(config)
-lg = CSVLogger("logs", name="testing")
-ptp = L.pytorch.profilers.PyTorchProfiler(filename="./ptprofiler.txt", group_by_input_shapes=True, dirname="./logs/")
-trainer = L.Trainer(limit_train_batches=100, max_epochs=1, profiler=ptp, callbacks=[DeviceStatsMonitor()], logger=lg)
-trainer.fit(model=b, train_dataloaders=dl)
-
+if __name__ == "__main__":
+    basicConfig(level=INFO)
+    ds = load_dataset("roneneldan/TinyStories", split="train")
+    lt = LlamaTokenizer("/Users/spott/Models/llama-2-tokenizer/tokenizer.model")
+    config = bbm.TransformerConfig(128, 1, lt.n_words, head_dim=128, max_seq_len=5499)
+    sds = SimpleDataset(ds, lt)
+    dl = torch.utils.data.DataLoader(sds, batch_size=10, shuffle=True, collate_fn=collate_fn, num_workers=5)
+    b = Babel(config)
+    #lg = CSVLogger("logs", name="testing")
+    ptp = PyTorchProfiler(filename="ptprofiler", group_by_input_shapes=True)
+    trainer = L.Trainer(limit_train_batches=100, max_epochs=1, profiler=ptp, callbacks=[DeviceStatsMonitor()], accelerator="cpu")
+    trainer.fit(model=b, train_dataloaders=dl)

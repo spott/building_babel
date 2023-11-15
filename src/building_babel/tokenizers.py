@@ -8,7 +8,7 @@ from sentencepiece import SentencePieceProcessor
 from logging import getLogger
 import os
 
-logger = getLogger("__name__")
+logger = getLogger(__name__)
 
 
 def codepoint_tokenize(s: str | list[str]):

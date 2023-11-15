@@ -13,7 +13,7 @@ from .modules.growable import GrowableEmbedding, GrowableLinear, GrowableRMSNorm
 from logging import getLogger
 
 
-logger = getLogger("__name__")
+logger = getLogger(__name__)
 
 
 class Attention(nn.Module):
@@ -50,21 +50,17 @@ class Attention(nn.Module):
     def forward(self, x):
         bs, sl, _ = x.size()
 
-        logger.debug("attention forward")
         q = self.wq_in(x)
         k = self.wk_in(x)
         v = self.wv_in(x)
-        logger.debug("weights")
 
         q, k = self.rope.apply_rotary_emb(q, k)
-        logger.debug("after rotary emb")
 
         q = q.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
         k = k.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
         v = v.view(bs, sl, self.n_heads, self.head_dim).transpose(1, 2)
 
         y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, is_causal=True)
-        logger.debug("after attention")
         y = y.transpose(1, 2).contiguous().view(bs, sl, self.dim)
         return self.w_out(y)
 
@@ -101,7 +97,6 @@ class FeedForwardNetwork(nn.Module):
         self.hidden_dim = hidden_dim
 
     def forward(self, x):
-        logger.debug("feedforward")
         return self.w2(F.silu(self.w1(x)) * self.gate(x))
 
 
@@ -133,11 +128,8 @@ class TransformerBlock(nn.Module):
         self.feed_forward_norm.grow(new_dim)
 
     def forward(self, x: torch.Tensor):
-        logger.debug("transformer block")
         h = x + self.attention(self.attention_norm(x))
-        logger.debug("after attention stuff")
         out = h + self.feed_forward(self.feed_forward_norm(h))
-        logger.debug("after transformer block")
         return out
 
 
@@ -187,9 +179,6 @@ class Transformer(nn.Module):
         b, t = tokens.size()
         x = self.text_embeddings(tokens)
         x = self.layers(x)
-        logger.debug("after layers")
         x = self.norm(x)
-        logger.debug("after final norm")
         x = self.output(x).float()
-        logger.debug("after final output")
         return x
